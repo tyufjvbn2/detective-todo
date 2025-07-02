@@ -1,5 +1,6 @@
 import os
 import logging
+
 from typing import List, Dict
 
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.DEBUG)
 def search_slack(query: str, token: str) -> List[Dict]:
     """Search Slack messages using Slack Search API."""
     logging.debug("Searching Slack for '%s'", query)
+
     response = requests.get(
         "https://slack.com/api/search.messages",
         params={"query": query, "count": 5},
@@ -26,8 +28,8 @@ def search_slack(query: str, token: str) -> List[Dict]:
         logging.debug("Slack search returned %d results", len(matches))
         return matches
     logging.debug("Slack search failed: %s", response.text)
-    return []
 
+    return []
 
 def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Jira issues."""
@@ -45,13 +47,14 @@ def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[D
         logging.debug("Jira search returned %d results", len(issues))
         return issues
     logging.debug("Jira search failed: %s", response.text)
-    return []
 
+    return []
 
 def search_confluence(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Confluence pages."""
     url = f"{base_url}/wiki/rest/api/search"
     logging.debug("Searching Confluence at %s for '%s'", base_url, query)
+
     response = requests.get(
         url,
         params={"cql": f"text ~ \"{query}\"", "limit": 5},
@@ -65,12 +68,8 @@ def search_confluence(query: str, base_url: str, email: str, api_token: str) -> 
     logging.debug("Confluence search failed: %s", response.text)
     return []
 
-
-
-
 # Initialize Slack app
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"), signing_secret=os.environ.get("SLACK_SIGNING_SECRET"))
-
 
 @app.command("/search")
 def handle_search(ack, respond, command):
@@ -101,7 +100,6 @@ def handle_search(ack, respond, command):
     if conf_base and conf_email and conf_token:
         conf_results = search_confluence(query, conf_base, conf_email, conf_token)
         results.append({"service": "Confluence", "items": conf_results})
-
 
     if not results:
         respond("No services configured for search.")
