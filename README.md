@@ -6,7 +6,7 @@ This project contains a sample Slack app that performs combined search across Sl
 
 1. Install Python dependencies:
    ```bash
-   pip install slack_bolt requests python-dotenv
+   pip install slack_bolt requests python-dotenv flask
    ```
 2. Copy `.env.example` to `.env` and fill in your credentials. **Do not commit this file.**
 3. Alternatively, set the following environment variables in your hosting environment:
@@ -26,5 +26,5 @@ Launch the Slack app as a web server with:
 python combined_search.py
 ```
 
-Configure your slash command's Request URL to point to your server (e.g. `https://your.server/slack/events`).
+Configure your slash command's Request URL to point to your server, for example `https://your.server/search`.
 Then use `/search` inside Slack to search across the configured services.

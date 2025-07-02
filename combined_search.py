@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 
 import requests
 from slack_bolt import App
+from slack_bolt.adapter.flask import SlackRequestHandler
+from flask import Flask, request
+
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -16,7 +19,6 @@ logging.basicConfig(level=logging.DEBUG)
 def search_slack(query: str, token: str) -> List[Dict]:
     """Search Slack messages using Slack Search API."""
     logging.debug("Searching Slack for '%s'", query)
-
     response = requests.get(
         "https://slack.com/api/search.messages",
         params={"query": query, "count": 5},
@@ -27,8 +29,9 @@ def search_slack(query: str, token: str) -> List[Dict]:
         matches = response.json().get("messages", {}).get("matches", [])
         logging.debug("Slack search returned %d results", len(matches))
         return matches
-    logging.debug("Slack search failed: %s", response.text)
-
+    logging.debug(
+        "Slack search failed with %d: %s", response.status_code, response.text
+    )
     return []
 
 def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
@@ -46,15 +49,15 @@ def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[D
         issues = response.json().get("issues", [])
         logging.debug("Jira search returned %d results", len(issues))
         return issues
-    logging.debug("Jira search failed: %s", response.text)
-
+    logging.debug(
+        "Jira search failed with %d: %s", response.status_code, response.text
+    )
     return []
 
 def search_confluence(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Confluence pages."""
     url = f"{base_url}/wiki/rest/api/search"
     logging.debug("Searching Confluence at %s for '%s'", base_url, query)
-
     response = requests.get(
         url,
         params={"cql": f"text ~ \"{query}\"", "limit": 5},
@@ -65,13 +68,25 @@ def search_confluence(query: str, base_url: str, email: str, api_token: str) -> 
         results = response.json().get("results", [])
         logging.debug("Confluence search returned %d results", len(results))
         return results
-    logging.debug("Confluence search failed: %s", response.text)
+    logging.debug(
+        "Confluence search failed with %d: %s", response.status_code, response.text
+    )
     return []
 
-# Initialize Slack app
-app = App(token=os.environ.get("SLACK_BOT_TOKEN"), signing_secret=os.environ.get("SLACK_SIGNING_SECRET"))
 
-@app.command("/search")
+
+
+# Initialize Slack app and Flask server
+bolt_app = App(
+    token=os.environ.get("SLACK_BOT_TOKEN"),
+    signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
+)
+flask_app = Flask(__name__)
+handler = SlackRequestHandler(bolt_app)
+
+
+@bolt_app.command("/search")
+
 def handle_search(ack, respond, command):
     ack()
     query = command.get("text", "")
@@ -129,9 +144,17 @@ def handle_search(ack, respond, command):
 
     respond("\n".join(message_lines))
 
+@flask_app.route("/search", methods=["POST"])
+def slack_events():
+    """Endpoint for Slack slash command requests."""
+    resp = handler.handle(request)
+    if 400 <= resp.status_code < 500:
+        logging.debug("/search responded with %d: %s", resp.status_code, resp.get_data(as_text=True))
+    return resp
+
 
 if __name__ == "__main__":
-    # Run the app as a web server so Slack can send HTTP requests to the
-    # command request URL. The PORT environment variable can be set by the
-    # hosting platform; default to 3000 for local testing.
-    app.start(port=int(os.environ.get("PORT", 3000)))
+    # Run the Flask app so Slack can send slash command requests to the
+    # /search endpoint. The PORT environment variable can be set by the hosting
+    # platform; default to 3000 for local testing.
+    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 3000)))
