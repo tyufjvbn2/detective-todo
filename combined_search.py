@@ -126,7 +126,7 @@ def handle_search(ack, respond, command):
         message_lines.append(f"*{service['service']}*:")
         items = service["items"]
         if not items:
-            message_lines.append("- No results found.")
+            message_lines.append("\t- No results found.")
         else:
             for item in items:
                 if service["service"] == "Slack":
@@ -139,10 +139,16 @@ def handle_search(ack, respond, command):
                 elif service["service"] == "Confluence":
                     text = item.get("title", "")
                     link = f"{conf_base}{item.get('url', '')}" if item.get('url') else ""
-                message_lines.append(f"- <{link}|{text}>")
+                message_lines.append(f"\t\u2022 <{link}|{text}>")
         message_lines.append("")
 
     respond("\n".join(message_lines))
+
+
+@bolt_app.command("/검색")
+def handle_search_korean(ack, respond, command):
+    """Alias for the /search command using a Korean slash command."""
+    handle_search(ack, respond, command)
 
 @flask_app.route("/search", methods=["POST"])
 def slack_events():
