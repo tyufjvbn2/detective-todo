@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 
 from typing import List, Dict
 
@@ -74,6 +75,56 @@ def search_confluence(query: str, base_url: str, email: str, api_token: str) -> 
     return []
 
 
+def summarize_results(results: List[Dict]) -> str:
+    """Return a tiny language-model style summary of all result texts."""
+    corpus = []
+    for service in results:
+        for item in service.get("items", []):
+            if service["service"] == "Slack":
+                corpus.append(item.get("text", ""))
+            elif service["service"] == "Jira":
+                corpus.append(item.get("fields", {}).get("summary", ""))
+            elif service["service"] == "Confluence":
+                corpus.append(item.get("title", ""))
+
+    text = " ".join(corpus).lower()
+    # Split on unicode word characters so queries in Korean, Japanese,
+    # Chinese, and other languages are handled reasonably.
+    tokens = re.findall(r"\w+", text, flags=re.UNICODE)
+    stop = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "this",
+        "that",
+        "are",
+        "you",
+        "your",
+        "have",
+        "has",
+        "from",
+        "but",
+        "not",
+        "use",
+        # A few very common words in Spanish
+        "para",
+        "los",
+        "las",
+    }
+    freq = {}
+    for tok in tokens:
+        if tok in stop or len(tok) < 3:
+            continue
+        freq[tok] = freq.get(tok, 0) + 1
+
+    if not freq:
+        return ""
+
+    top_words = [w for w, _ in sorted(freq.items(), key=lambda x: x[1], reverse=True)[:5]]
+    return "Top topics: " + ", ".join(top_words) + "."
+
+
 
 
 # Initialize Slack app and Flask server
@@ -126,7 +177,7 @@ def handle_search(ack, respond, command):
         message_lines.append(f"*{service['service']}*:")
         items = service["items"]
         if not items:
-            message_lines.append("- No results found.")
+            message_lines.append("\t- No results found.")
         else:
             for item in items:
                 if service["service"] == "Slack":
@@ -139,10 +190,21 @@ def handle_search(ack, respond, command):
                 elif service["service"] == "Confluence":
                     text = item.get("title", "")
                     link = f"{conf_base}{item.get('url', '')}" if item.get('url') else ""
-                message_lines.append(f"- <{link}|{text}>")
+                message_lines.append(f"\t\u2022 <{link}|{text}>")
         message_lines.append("")
 
+    summary = summarize_results(results)
+    if summary:
+        message_lines.append("*Summary:*")
+        message_lines.append(summary)
+
     respond("\n".join(message_lines))
+
+
+@bolt_app.command("/검색")
+def handle_search_korean(ack, respond, command):
+    """Alias for the /search command using a Korean slash command."""
+    handle_search(ack, respond, command)
 
 @flask_app.route("/search", methods=["POST"])
 def slack_events():
