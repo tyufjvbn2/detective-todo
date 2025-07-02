@@ -144,6 +144,12 @@ def handle_search(ack, respond, command):
 
     respond("\n".join(message_lines))
 
+
+@bolt_app.command("/검색")
+def handle_search_korean(ack, respond, command):
+    """Alias for the /search command using a Korean slash command."""
+    handle_search(ack, respond, command)
+
 @flask_app.route("/search", methods=["POST"])
 def slack_events():
     """Endpoint for Slack slash command requests."""

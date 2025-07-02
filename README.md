@@ -27,4 +27,5 @@ python combined_search.py
 ```
 
 Configure your slash command's Request URL to point to your server, for example `https://your.server/search`.
-Then use `/search` inside Slack to search across the configured services.
+Use the `/search` command inside Slack to search across the configured services.  
+The app also accepts the Korean variant `/검색` as an alias for `/search`.
