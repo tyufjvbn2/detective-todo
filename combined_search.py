@@ -1,5 +1,6 @@
 import os
 import logging
+
 from typing import List, Dict
 
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ import requests
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
+
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -32,7 +34,6 @@ def search_slack(query: str, token: str) -> List[Dict]:
     )
     return []
 
-
 def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Jira issues."""
     url = f"{base_url}/rest/api/2/search"
@@ -52,7 +53,6 @@ def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[D
         "Jira search failed with %d: %s", response.status_code, response.text
     )
     return []
-
 
 def search_confluence(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Confluence pages."""
@@ -86,6 +86,7 @@ handler = SlackRequestHandler(bolt_app)
 
 
 @bolt_app.command("/search")
+
 def handle_search(ack, respond, command):
     ack()
     query = command.get("text", "")
@@ -115,7 +116,6 @@ def handle_search(ack, respond, command):
         conf_results = search_confluence(query, conf_base, conf_email, conf_token)
         results.append({"service": "Confluence", "items": conf_results})
 
-
     if not results:
         respond("No services configured for search.")
         return
@@ -143,7 +143,6 @@ def handle_search(ack, respond, command):
         message_lines.append("")
 
     respond("\n".join(message_lines))
-
 
 @flask_app.route("/search", methods=["POST"])
 def slack_events():
