@@ -30,4 +30,7 @@ Configure your slash command's Request URL to point to your server, for example 
 Use the `/search` command inside Slack to search across the configured services.
 The app also accepts the Korean variant `/검색` as an alias for `/search`.
 
-Results are returned as indented bullets with clickable links for easy access.
+Queries can be in Korean, English, Japanese, Chinese, or Spanish. Search
+results appear as indented bullets with clickable links for easy access.
+At the bottom of the response, a tiny built-in language model summarizes the
+most common topics from all results.
