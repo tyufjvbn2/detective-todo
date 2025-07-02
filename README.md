@@ -1,6 +1,6 @@
 # Detective Todo
 
-This project contains a sample Slack app that performs combined search across Slack, Jira, Confluence, and Google Drive.
+This project contains a sample Slack app that performs combined search across Slack, Jira, and Confluence.
 
 ## Setup
 
@@ -15,7 +15,6 @@ This project contains a sample Slack app that performs combined search across Sl
    - `PORT` (optional, port the server will listen on)
    - `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`
    - `CONFLUENCE_BASE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`
-   - `GOOGLE_DRIVE_API_KEY`
 
 Only the Slack variables are required. The others are optional; the app will search whichever services are configured.
 

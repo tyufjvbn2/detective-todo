@@ -1,4 +1,6 @@
 import os
+import logging
+
 from typing import List, Dict
 
 from dotenv import load_dotenv
@@ -7,11 +9,14 @@ import requests
 from slack_bolt import App
 
 load_dotenv()
+logging.basicConfig(level=logging.DEBUG)
 
 # Helper functions for each service
 
 def search_slack(query: str, token: str) -> List[Dict]:
     """Search Slack messages using Slack Search API."""
+    logging.debug("Searching Slack for '%s'", query)
+
     response = requests.get(
         "https://slack.com/api/search.messages",
         params={"query": query, "count": 5},
@@ -19,14 +24,18 @@ def search_slack(query: str, token: str) -> List[Dict]:
         timeout=10,
     )
     if response.ok and response.json().get("ok"):
-        return response.json().get("messages", {}).get("matches", [])
-    return []
+        matches = response.json().get("messages", {}).get("matches", [])
+        logging.debug("Slack search returned %d results", len(matches))
+        return matches
+    logging.debug("Slack search failed: %s", response.text)
 
+    return []
 
 def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Jira issues."""
     url = f"{base_url}/rest/api/2/search"
     jql = f"text ~ \"{query}\" order by updated desc"
+    logging.debug("Searching Jira at %s for '%s'", base_url, query)
     response = requests.get(
         url,
         params={"jql": jql, "maxResults": 5},
@@ -34,13 +43,18 @@ def search_jira(query: str, base_url: str, email: str, api_token: str) -> List[D
         timeout=10,
     )
     if response.ok:
-        return response.json().get("issues", [])
-    return []
+        issues = response.json().get("issues", [])
+        logging.debug("Jira search returned %d results", len(issues))
+        return issues
+    logging.debug("Jira search failed: %s", response.text)
 
+    return []
 
 def search_confluence(query: str, base_url: str, email: str, api_token: str) -> List[Dict]:
     """Search Confluence pages."""
     url = f"{base_url}/wiki/rest/api/search"
+    logging.debug("Searching Confluence at %s for '%s'", base_url, query)
+
     response = requests.get(
         url,
         params={"cql": f"text ~ \"{query}\"", "limit": 5},
@@ -48,26 +62,14 @@ def search_confluence(query: str, base_url: str, email: str, api_token: str) -> 
         timeout=10,
     )
     if response.ok:
-        return response.json().get("results", [])
+        results = response.json().get("results", [])
+        logging.debug("Confluence search returned %d results", len(results))
+        return results
+    logging.debug("Confluence search failed: %s", response.text)
     return []
-
-
-def search_drive(query: str, api_key: str) -> List[Dict]:
-    """Search Google Drive files using Drive API."""
-    url = "https://www.googleapis.com/drive/v3/files"
-    response = requests.get(
-        url,
-        params={"q": f"name contains '{query}'", "pageSize": 5, "key": api_key},
-        timeout=10,
-    )
-    if response.ok:
-        return response.json().get("files", [])
-    return []
-
 
 # Initialize Slack app
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"), signing_secret=os.environ.get("SLACK_SIGNING_SECRET"))
-
 
 @app.command("/search")
 def handle_search(ack, respond, command):
@@ -84,7 +86,6 @@ def handle_search(ack, respond, command):
     conf_base = os.environ.get("CONFLUENCE_BASE_URL")
     conf_email = os.environ.get("CONFLUENCE_EMAIL")
     conf_token = os.environ.get("CONFLUENCE_API_TOKEN")
-    drive_key = os.environ.get("GOOGLE_DRIVE_API_KEY")
 
     results = []
 
@@ -99,10 +100,6 @@ def handle_search(ack, respond, command):
     if conf_base and conf_email and conf_token:
         conf_results = search_confluence(query, conf_base, conf_email, conf_token)
         results.append({"service": "Confluence", "items": conf_results})
-
-    if drive_key:
-        drive_results = search_drive(query, drive_key)
-        results.append({"service": "Google Drive", "items": drive_results})
 
     if not results:
         respond("No services configured for search.")
@@ -127,9 +124,6 @@ def handle_search(ack, respond, command):
                 elif service["service"] == "Confluence":
                     text = item.get("title", "")
                     link = f"{conf_base}{item.get('url', '')}" if item.get('url') else ""
-                else:  # Google Drive
-                    text = item.get("name", "")
-                    link = item.get("webViewLink", "")
                 message_lines.append(f"- <{link}|{text}>")
         message_lines.append("")
 
