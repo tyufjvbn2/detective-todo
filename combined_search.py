@@ -88,6 +88,10 @@ def summarize_results(results: List[Dict]) -> str:
                 corpus.append(item.get("title", ""))
 
     text = " ".join(corpus).lower()
+    
+    # Remove URLs so they don't pollute the summary.
+    text = re.sub(r"https?://\S+", "", text)
+
     # Split on unicode word characters so queries in Korean, Japanese,
     # Chinese, and other languages are handled reasonably.
     tokens = re.findall(r"\w+", text, flags=re.UNICODE)
