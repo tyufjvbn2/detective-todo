@@ -1,9 +1,12 @@
 import os
 from typing import List, Dict
 
+from dotenv import load_dotenv
+
 import requests
 from slack_bolt import App
 
+load_dotenv()
 
 # Helper functions for each service
 

@@ -6,9 +6,10 @@ This project contains a sample Slack app that performs combined search across Sl
 
 1. Install Python dependencies:
    ```bash
-   pip install slack_bolt requests
+   pip install slack_bolt requests python-dotenv
    ```
-2. Set the following environment variables with your credentials:
+2. Copy `.env.example` to `.env` and fill in your credentials. **Do not commit this file.**
+3. Alternatively, set the following environment variables in your hosting environment:
    - `SLACK_BOT_TOKEN`
    - `SLACK_SIGNING_SECRET`
    - `PORT` (optional, port the server will listen on)
